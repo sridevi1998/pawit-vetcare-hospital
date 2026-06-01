@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { components, paths } from "../../pawit-vetcare-contracts/src/pawit-api";
+import type { components, paths } from "./pawit-api-types";
 
 type ApiPath = keyof paths;
 type JsonRequest<Path extends ApiPath, Method extends keyof paths[Path]> =
