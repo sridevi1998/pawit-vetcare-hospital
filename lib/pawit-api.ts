@@ -23,6 +23,11 @@ export type VoidInvoiceResult = JsonResponse<"/api/v1/billing/invoices/{id}/void
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_PAWIT_API_BASE_URL ?? "http://localhost:8080",
+  headers: {
+    "X-PawIt-Tenant-ID": process.env.NEXT_PUBLIC_PAWIT_TENANT_ID,
+    "X-PawIt-User-ID": process.env.NEXT_PUBLIC_PAWIT_USER_ID,
+    "X-PawIt-Role": process.env.NEXT_PUBLIC_PAWIT_ROLE,
+  },
   withCredentials: true,
 });
 
