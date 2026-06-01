@@ -1,5 +1,10 @@
 import { CalendarDays, ClipboardList, FlaskConical, PawPrint, Users } from "lucide-react";
 
+import { BillingDashboard } from "@/components/billing-dashboard";
+import { getBilling } from "@/lib/pawit-api";
+
+export const dynamic = "force-dynamic";
+
 const modules = [
   { label: "Appointments", value: "5", icon: CalendarDays },
   { label: "Pet Records", value: "19", icon: PawPrint },
@@ -7,7 +12,11 @@ const modules = [
   { label: "Lab Tests", value: "0", icon: FlaskConical },
 ];
 
-export default function Page() {
+export default async function Page() {
+  const billing = await getBilling()
+    .then((data) => ({ data, error: null }))
+    .catch(() => ({ data: null, error: "Billing data is unavailable." }));
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-white p-6 lg:block">
@@ -58,6 +67,7 @@ export default function Page() {
               </div>
             </div>
           </section>
+          <BillingDashboard initialBilling={billing.data} initialError={billing.error} />
         </div>
       </section>
     </main>
