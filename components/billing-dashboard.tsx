@@ -3,8 +3,7 @@
 import { AlertCircle, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { getBilling, type BillingResponse } from "@/lib/pawit-api";
-import type { Invoice } from "@/lib/pawit-api-types";
+import { getBilling, type BillingResponse, type Invoice } from "@/lib/pawit-api";
 
 const currency = new Intl.NumberFormat("en-US", {
   currency: "USD",

@@ -16,6 +16,7 @@ type JsonResponse<Path extends ApiPath, Method extends keyof paths[Path], Status
     : never;
 
 export type BillingResponse = components["schemas"]["BillingResponse"];
+export type Invoice = components["schemas"]["Invoice"];
 export type CreateInvoiceRequest = JsonRequest<"/api/v1/billing/invoices", "post">;
 export type InvoiceMutationResult = JsonResponse<"/api/v1/billing/invoices", "post", 201>;
 export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void", "post">;
