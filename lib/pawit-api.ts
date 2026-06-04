@@ -22,12 +22,14 @@ export type InvoiceMutationResult = JsonResponse<"/api/v1/billing/invoices", "po
 export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void", "post">;
 export type VoidInvoiceResult = JsonResponse<"/api/v1/billing/invoices/{id}/void", "post", 200>;
 
+const runtimeConfig = typeof window === "undefined" ? {} : window.__PAWIT_CONFIG__ ?? {};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_PAWIT_API_BASE_URL ?? "http://localhost:8080",
+  baseURL: runtimeConfig.apiBaseUrl || process.env.NEXT_PUBLIC_PAWIT_API_BASE_URL || "http://localhost:8080",
   headers: {
-    "X-PawIt-Tenant-ID": process.env.NEXT_PUBLIC_PAWIT_TENANT_ID,
-    "X-PawIt-User-ID": process.env.NEXT_PUBLIC_PAWIT_USER_ID,
-    "X-PawIt-Role": process.env.NEXT_PUBLIC_PAWIT_ROLE,
+    "X-PawIt-Tenant-ID": runtimeConfig.tenantId || process.env.NEXT_PUBLIC_PAWIT_TENANT_ID,
+    "X-PawIt-User-ID": runtimeConfig.userId || process.env.NEXT_PUBLIC_PAWIT_USER_ID,
+    "X-PawIt-Role": runtimeConfig.role || process.env.NEXT_PUBLIC_PAWIT_ROLE,
   },
   withCredentials: true,
 });
