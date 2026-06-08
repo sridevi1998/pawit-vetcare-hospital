@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { BillingDashboard } from "@/components/billing-dashboard";
 import { PortalShell } from "@/components/portal-shell";
+import { WorkflowActions } from "@/components/workflow-actions";
 import {
   getAnalytics,
   getAppointments,
@@ -140,6 +141,7 @@ export default async function HospitalSectionPage({ params }: PageProps) {
 
   return (
     <PortalShell activePath={`/hospital/${section}`} eyebrow={config.eyebrow} title={config.title} subtitle={config.subtitle}>
+      <WorkflowActions section={section} />
       {await sectionContent(section)}
     </PortalShell>
   );

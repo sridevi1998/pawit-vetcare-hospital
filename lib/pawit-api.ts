@@ -30,10 +30,22 @@ export type FeedbackResponse = components["schemas"]["FeedbackResponse"];
 export type Feedback = components["schemas"]["Feedback"];
 export type Person = components["schemas"]["Person"];
 export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
+export type CreateAppointmentRequest = JsonRequest<"/api/v1/appointments", "post">;
+export type AppointmentMutationResult = JsonResponse<"/api/v1/appointments", "post", 201>;
+export type RegisterWalkInRequest = JsonRequest<"/api/v1/queue/walk-ins", "post">;
+export type QueueMutationResult = JsonResponse<"/api/v1/queue/walk-ins", "post", 201>;
+export type CreatePetRequest = JsonRequest<"/api/v1/pets", "post">;
+export type PetMutationResult = JsonResponse<"/api/v1/pets", "post", 201>;
+export type CreatePrescriptionRequest = JsonRequest<"/api/v1/prescriptions", "post">;
+export type PrescriptionMutationResult = JsonResponse<"/api/v1/prescriptions", "post", 201>;
+export type CreateLabOrderRequest = JsonRequest<"/api/v1/lab-tests", "post">;
+export type LabOrderMutationResult = JsonResponse<"/api/v1/lab-tests", "post", 201>;
 export type CreateInvoiceRequest = JsonRequest<"/api/v1/billing/invoices", "post">;
 export type InvoiceMutationResult = JsonResponse<"/api/v1/billing/invoices", "post", 201>;
 export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void", "post">;
 export type VoidInvoiceResult = JsonResponse<"/api/v1/billing/invoices/{id}/void", "post", 200>;
+export type CreateStaffRequest = JsonRequest<"/api/v1/staff", "post">;
+export type StaffMutationResult = JsonResponse<"/api/v1/staff", "post", 201>;
 
 const runtimeConfig = typeof window === "undefined" ? {} : window.__PAWIT_CONFIG__ ?? {};
 
@@ -117,11 +129,65 @@ export async function getAuditLogs() {
   return response.data;
 }
 
+export async function createAppointment(
+  body: CreateAppointmentRequest,
+  idempotencyKey: string,
+): Promise<AppointmentMutationResult> {
+  const response = await api.post<AppointmentMutationResult>("/api/v1/appointments", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function registerWalkIn(
+  body: RegisterWalkInRequest,
+  idempotencyKey: string,
+): Promise<QueueMutationResult> {
+  const response = await api.post<QueueMutationResult>("/api/v1/queue/walk-ins", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createPet(body: CreatePetRequest, idempotencyKey: string): Promise<PetMutationResult> {
+  const response = await api.post<PetMutationResult>("/api/v1/pets", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createPrescription(
+  body: CreatePrescriptionRequest,
+  idempotencyKey: string,
+): Promise<PrescriptionMutationResult> {
+  const response = await api.post<PrescriptionMutationResult>("/api/v1/prescriptions", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createLabOrder(
+  body: CreateLabOrderRequest,
+  idempotencyKey: string,
+): Promise<LabOrderMutationResult> {
+  const response = await api.post<LabOrderMutationResult>("/api/v1/lab-tests", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
 export async function createInvoice(
   body: CreateInvoiceRequest,
   idempotencyKey: string,
 ): Promise<InvoiceMutationResult> {
   const response = await api.post<InvoiceMutationResult>("/api/v1/billing/invoices", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createStaff(body: CreateStaffRequest, idempotencyKey: string): Promise<StaffMutationResult> {
+  const response = await api.post<StaffMutationResult>("/api/v1/staff", body, {
     headers: { "Idempotency-Key": idempotencyKey },
   });
   return response.data;
