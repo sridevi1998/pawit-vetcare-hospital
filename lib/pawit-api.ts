@@ -17,6 +17,19 @@ type JsonResponse<Path extends ApiPath, Method extends keyof paths[Path], Status
 
 export type BillingResponse = components["schemas"]["BillingResponse"];
 export type Invoice = components["schemas"]["Invoice"];
+export type Metric = components["schemas"]["Metric"];
+export type Appointment = components["schemas"]["Appointment"];
+export type CalendarResponse = components["schemas"]["CalendarResponse"];
+export type QueueEntry = components["schemas"]["QueueEntry"];
+export type PetRecord = components["schemas"]["PetRecord"];
+export type Prescription = components["schemas"]["Prescription"];
+export type ClinicalNote = components["schemas"]["ClinicalNote"];
+export type LabTest = components["schemas"]["LabTest"];
+export type Analytics = components["schemas"]["Analytics"];
+export type FeedbackResponse = components["schemas"]["FeedbackResponse"];
+export type Feedback = components["schemas"]["Feedback"];
+export type Person = components["schemas"]["Person"];
+export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 export type CreateInvoiceRequest = JsonRequest<"/api/v1/billing/invoices", "post">;
 export type InvoiceMutationResult = JsonResponse<"/api/v1/billing/invoices", "post", 201>;
 export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void", "post">;
@@ -36,6 +49,71 @@ const api = axios.create({
 
 export async function getBilling(): Promise<BillingResponse> {
   const response = await api.get<BillingResponse>("/api/v1/billing");
+  return response.data;
+}
+
+export async function getDashboardSummary() {
+  const response = await api.get<{ metrics: Metric[] }>("/api/v1/dashboard/summary");
+  return response.data;
+}
+
+export async function getAppointments() {
+  const response = await api.get<{ items: Appointment[] }>("/api/v1/appointments");
+  return response.data;
+}
+
+export async function getCalendar() {
+  const response = await api.get<CalendarResponse>("/api/v1/calendar");
+  return response.data;
+}
+
+export async function getQueue() {
+  const response = await api.get<{ items: QueueEntry[] }>("/api/v1/queue");
+  return response.data;
+}
+
+export async function getPets() {
+  const response = await api.get<{ items: PetRecord[] }>("/api/v1/pets");
+  return response.data;
+}
+
+export async function getPrescriptions() {
+  const response = await api.get<{ items: Prescription[] }>("/api/v1/prescriptions");
+  return response.data;
+}
+
+export async function getClinicalNotes() {
+  const response = await api.get<{ items: ClinicalNote[] }>("/api/v1/clinical-notes");
+  return response.data;
+}
+
+export async function getLabTests() {
+  const response = await api.get<{ items: LabTest[] }>("/api/v1/lab-tests");
+  return response.data;
+}
+
+export async function getAnalytics() {
+  const response = await api.get<Analytics>("/api/v1/analytics");
+  return response.data;
+}
+
+export async function getFeedback() {
+  const response = await api.get<FeedbackResponse>("/api/v1/feedback");
+  return response.data;
+}
+
+export async function getDoctors() {
+  const response = await api.get<{ items: Person[] }>("/api/v1/doctors");
+  return response.data;
+}
+
+export async function getStaff() {
+  const response = await api.get<{ items: Person[] }>("/api/v1/staff");
+  return response.data;
+}
+
+export async function getAuditLogs() {
+  const response = await api.get<{ items: AuditLogEntry[] }>("/api/v1/audit-logs");
   return response.data;
 }
 

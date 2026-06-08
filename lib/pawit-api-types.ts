@@ -325,13 +325,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List active document metadata for a pet */
+        get: operations["listPetDocuments"];
         put?: never;
         /**
          * Register uploaded pet document metadata
          * @description The file itself is stored through a signed upload flow. This endpoint records the document metadata once storage has accepted the object.
          */
         post: operations["uploadPetDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pets/{id}/documents/{documentId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive pet document metadata with an audit reason
+         * @description Document objects stay in storage; this marks metadata inactive in tenant scope.
+         */
+        post: operations["archivePetDocument"];
         delete?: never;
         options?: never;
         head?: never;
@@ -352,6 +373,47 @@ export interface paths {
         get: operations["listPatients"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prescriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant prescriptions */
+        get: operations["listPrescriptions"];
+        put?: never;
+        /**
+         * Create a prescription draft with medication lines
+         * @description Veterinarians and vet technicians can create drafts; finalization is a separate veterinarian-only step.
+         */
+        post: operations["createPrescription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prescriptions/{id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finalize a prescription draft
+         * @description Finalized prescriptions may optionally be shared with the pet parent.
+         */
+        post: operations["finalizePrescription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -558,6 +620,30 @@ export interface paths {
         };
         /** List non-pet-parent clinic staff */
         get: operations["listStaff"];
+        put?: never;
+        /**
+         * Invite or reactivate a tenant staff member
+         * @description Clinic admins can create a pending staff invite or reactivate an existing staff account.
+         */
+        post: operations["createStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List tenant audit log entries
+         * @description Clinic admins and internal super admins can review recent immutable audit entries for the tenant.
+         */
+        get: operations["listAuditLogs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -787,6 +873,9 @@ export interface components {
         ArchivePetRequest: {
             reason: string;
         };
+        ArchivePetDocumentRequest: {
+            reason: string;
+        };
         PetMutationResult: {
             pet: components["schemas"]["PetRecord"];
             idempotent?: boolean;
@@ -798,6 +887,9 @@ export interface components {
             contentType: string;
             /** Format: int64 */
             sizeBytes: number;
+        };
+        PetDocumentList: {
+            items: components["schemas"]["PetDocument"][];
         };
         PetDocumentMutationResult: {
             document: components["schemas"]["PetDocument"];
@@ -816,6 +908,46 @@ export interface components {
             status: "active" | "archived";
             /** Format: date-time */
             createdAt: string;
+        };
+        PrescriptionList: {
+            items: components["schemas"]["Prescription"][];
+        };
+        Prescription: {
+            id: string;
+            petName: string;
+            ownerName: string;
+            /** @enum {string} */
+            status: "draft" | "finalized";
+            medicationNames: string[];
+            instructions?: string;
+            sharedWithPetParent: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PrescriptionMedicationInput: {
+            medicationName: string;
+            strength?: string;
+            dosage?: string;
+            frequency?: string;
+            duration?: string;
+            route?: string;
+            instructions?: string;
+        };
+        CreatePrescriptionRequest: {
+            locationId: string;
+            petId: string;
+            appointmentId?: string;
+            prescribingVeterinarianId?: string;
+            instructions?: string;
+            sharedWithPetParent?: boolean;
+            medications: components["schemas"]["PrescriptionMedicationInput"][];
+        };
+        FinalizePrescriptionRequest: {
+            shareWithPetParent?: boolean;
+        };
+        PrescriptionMutationResult: {
+            prescription: components["schemas"]["Prescription"];
+            idempotent?: boolean;
         };
         PrescriptionTemplateList: {
             items: components["schemas"]["PrescriptionTemplate"][];
@@ -969,6 +1101,31 @@ export interface components {
             email: string;
             status: string;
         };
+        CreateStaffRequest: {
+            name: string;
+            /** Format: email */
+            email: string;
+            role: components["schemas"]["Role"];
+            defaultLocationId?: string;
+        };
+        StaffMutationResult: {
+            staffMember: components["schemas"]["Person"];
+            idempotent?: boolean;
+        };
+        AuditLogList: {
+            items: components["schemas"]["AuditLogEntry"][];
+        };
+        AuditLogEntry: {
+            id: string;
+            actorUserId?: string;
+            actorRole?: string;
+            action: string;
+            resourceType: string;
+            resourceId?: string;
+            reason?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
         /** @enum {string} */
         Role: "SuperAdmin" | "ClinicAdmin" | "Veterinarian" | "Receptionist" | "VetTechnician" | "LabTechnician" | "PetParent";
         /** @enum {string} */
@@ -1052,6 +1209,8 @@ export interface components {
         IdempotencyKey: string;
         /** @description Resource identifier. */
         PathID: string;
+        /** @description Pet document identifier. */
+        DocumentID: string;
     };
     requestBodies: {
         UpdateQueueBody: {
@@ -1260,6 +1419,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
@@ -1293,6 +1453,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1366,6 +1527,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
@@ -1386,6 +1548,7 @@ export interface operations {
         requestBody: components["requestBodies"]["UpdateQueueBody"];
         responses: {
             200: components["responses"]["QueueMutationOK"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1407,6 +1570,7 @@ export interface operations {
         requestBody: components["requestBodies"]["UpdateQueueBody"];
         responses: {
             200: components["responses"]["QueueMutationOK"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1428,6 +1592,7 @@ export interface operations {
         requestBody: components["requestBodies"]["UpdateQueueBody"];
         responses: {
             200: components["responses"]["QueueMutationOK"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1449,6 +1614,7 @@ export interface operations {
         requestBody: components["requestBodies"]["UpdateQueueBody"];
         responses: {
             200: components["responses"]["QueueMutationOK"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1501,6 +1667,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
@@ -1534,9 +1701,37 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listPetDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier. */
+                id: components["parameters"]["PathID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pet document metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PetDocumentList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     uploadPetDocument: {
@@ -1568,6 +1763,44 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    archivePetDocument: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Resource identifier. */
+                id: components["parameters"]["PathID"];
+                /** @description Pet document identifier. */
+                documentId: components["parameters"]["DocumentID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchivePetDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Document metadata archived */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PetDocumentMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1592,6 +1825,94 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listPrescriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Prescription drafts and finalized prescriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrescriptionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPrescription: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePrescriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Prescription draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrescriptionMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    finalizePrescription: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Resource identifier. */
+                id: components["parameters"]["PathID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinalizePrescriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Prescription finalized */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrescriptionMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listPrescriptionTemplates: {
@@ -1683,6 +2004,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
@@ -1716,6 +2038,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1750,6 +2073,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1802,6 +2126,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
@@ -1835,6 +2160,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
@@ -1922,6 +2248,59 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    createStaff: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStaffRequest"];
+            };
+        };
+        responses: {
+            /** @description Staff member invited or reactivated */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listAuditLogs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audit log entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }
