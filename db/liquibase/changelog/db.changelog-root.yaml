@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - include:
+      file: 001-hospital-core.postgresql.sql
+      relativeToChangelogFile: true
