@@ -2,11 +2,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "db:diff": "scripts/liquibase.sh diff",
-    "db:rollback": "scripts/liquibase.sh rollback-count",
-    "db:status": "scripts/liquibase.sh status",
-    "db:update": "scripts/liquibase.sh update",
-    "db:validate": "scripts/liquibase.sh validate",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
