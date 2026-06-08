@@ -40,6 +40,13 @@ export type UpdateQueueRequest = components["schemas"]["UpdateQueueRequest"];
 export type QueueTransitionResult = JsonResponse<"/api/v1/queue/{id}/call", "post", 200>;
 export type CreatePetRequest = JsonRequest<"/api/v1/pets", "post">;
 export type PetMutationResult = JsonResponse<"/api/v1/pets", "post", 201>;
+export type ArchivePetRequest = JsonRequest<"/api/v1/pets/{id}/archive", "post">;
+export type ArchivePetResult = JsonResponse<"/api/v1/pets/{id}/archive", "post", 200>;
+export type PetDocument = components["schemas"]["PetDocument"];
+export type UploadPetDocumentRequest = JsonRequest<"/api/v1/pets/{id}/documents", "post">;
+export type UploadPetDocumentResult = JsonResponse<"/api/v1/pets/{id}/documents", "post", 201>;
+export type ArchivePetDocumentRequest = JsonRequest<"/api/v1/pets/{id}/documents/{documentId}/archive", "post">;
+export type ArchivePetDocumentResult = JsonResponse<"/api/v1/pets/{id}/documents/{documentId}/archive", "post", 200>;
 export type CreatePrescriptionRequest = JsonRequest<"/api/v1/prescriptions", "post">;
 export type PrescriptionMutationResult = JsonResponse<"/api/v1/prescriptions", "post", 201>;
 export type FinalizePrescriptionRequest = JsonRequest<"/api/v1/prescriptions/{id}/finalize", "post">;
@@ -202,6 +209,49 @@ export async function createPet(body: CreatePetRequest, idempotencyKey: string):
   const response = await api.post<PetMutationResult>("/api/v1/pets", body, {
     headers: { "Idempotency-Key": idempotencyKey },
   });
+  return response.data;
+}
+
+export async function archivePet(
+  petID: string,
+  body: ArchivePetRequest,
+  idempotencyKey: string,
+): Promise<ArchivePetResult> {
+  const response = await api.post<ArchivePetResult>(`/api/v1/pets/${petID}/archive`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function getPetDocuments(petID: string) {
+  const response = await api.get<{ items: PetDocument[] }>(`/api/v1/pets/${petID}/documents`);
+  return response.data;
+}
+
+export async function uploadPetDocument(
+  petID: string,
+  body: UploadPetDocumentRequest,
+  idempotencyKey: string,
+): Promise<UploadPetDocumentResult> {
+  const response = await api.post<UploadPetDocumentResult>(`/api/v1/pets/${petID}/documents`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function archivePetDocument(
+  petID: string,
+  documentID: string,
+  body: ArchivePetDocumentRequest,
+  idempotencyKey: string,
+): Promise<ArchivePetDocumentResult> {
+  const response = await api.post<ArchivePetDocumentResult>(
+    `/api/v1/pets/${petID}/documents/${documentID}/archive`,
+    body,
+    {
+      headers: { "Idempotency-Key": idempotencyKey },
+    },
+  );
   return response.data;
 }
 

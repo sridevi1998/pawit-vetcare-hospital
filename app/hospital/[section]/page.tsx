@@ -6,6 +6,7 @@ import { BillingDashboard } from "@/components/billing-dashboard";
 import {
   AppointmentLifecycleActions,
   LabTestLifecycleActions,
+  PatientLifecycleActions,
   PrescriptionLifecycleActions,
   QueueLifecycleActions,
 } from "@/components/lifecycle-actions";
@@ -256,7 +257,7 @@ function PatientsView({ items }: { items: PetRecord[] }) {
   return (
     <Table
       empty="No pet records"
-      headers={["Pet", "Guardian", "Species", "Breed", "Care", "Documents"]}
+      headers={["Pet", "Guardian", "Species", "Breed", "Care", "Documents", "Actions"]}
       rows={items.map((item) => [
         <Primary key="pet" label={item.petName} sublabel={`${item.age} ${item.sex}`.trim()} />,
         <Primary key="guardian" label={item.ownerName} sublabel={item.phone} />,
@@ -264,6 +265,7 @@ function PatientsView({ items }: { items: PetRecord[] }) {
         item.breed,
         `${item.vaccinesDue} vaccines due, ${item.openPlans} plans`,
         `${item.documentsCount} files`,
+        <PatientLifecycleActions key="actions" pet={item} />,
       ])}
     />
   );
