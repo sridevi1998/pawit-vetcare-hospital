@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { BillingDashboard } from "@/components/billing-dashboard";
+import {
+  AppointmentLifecycleActions,
+  LabTestLifecycleActions,
+  PrescriptionLifecycleActions,
+  QueueLifecycleActions,
+} from "@/components/lifecycle-actions";
 import { PortalShell } from "@/components/portal-shell";
 import { WorkflowActions } from "@/components/workflow-actions";
 import {
@@ -205,7 +211,7 @@ function AppointmentsView({ items }: { items: Appointment[] }) {
   return (
     <Table
       empty="No appointments found"
-      headers={["Pet", "Guardian", "Veterinarian", "Type", "Status", "Time"]}
+      headers={["Pet", "Guardian", "Veterinarian", "Type", "Status", "Time", "Actions"]}
       rows={items.map((item) => [
         <Primary key="pet" label={item.petName} sublabel={item.reason} />,
         item.ownerName,
@@ -213,6 +219,7 @@ function AppointmentsView({ items }: { items: Appointment[] }) {
         labelize(item.type),
         <Status key="status" value={item.status} />,
         item.time,
+        <AppointmentLifecycleActions appointment={item} key="actions" />,
       ])}
     />
   );
@@ -231,7 +238,7 @@ function QueueView({ items }: { items: QueueEntry[] }) {
   return (
     <Table
       empty="No queue entries"
-      headers={["Pet", "Guardian", "Species", "Priority", "Status", "Wait"]}
+      headers={["Pet", "Guardian", "Species", "Priority", "Status", "Wait", "Actions"]}
       rows={items.map((item) => [
         item.petName,
         item.ownerName,
@@ -239,6 +246,7 @@ function QueueView({ items }: { items: QueueEntry[] }) {
         labelize(item.priority),
         <Status key="status" value={item.status} />,
         `${item.waitMins} min`,
+        <QueueLifecycleActions entry={item} key="actions" />,
       ])}
     />
   );
@@ -282,7 +290,7 @@ function PrescriptionsView({ items }: { items: Prescription[] }) {
   return (
     <Table
       empty="No prescriptions"
-      headers={["Pet", "Guardian", "Status", "Medications", "Shared", "Updated"]}
+      headers={["Pet", "Guardian", "Status", "Medications", "Shared", "Updated", "Actions"]}
       rows={items.map((item) => [
         item.petName,
         item.ownerName,
@@ -290,6 +298,7 @@ function PrescriptionsView({ items }: { items: Prescription[] }) {
         item.medicationNames.join(", "),
         item.sharedWithPetParent ? "Yes" : "No",
         formatDate(item.updatedAt),
+        <PrescriptionLifecycleActions key="actions" prescriptionID={item.id} status={item.status} />,
       ])}
     />
   );
@@ -299,7 +308,7 @@ function LabTestsView({ items }: { items: LabTest[] }) {
   return (
     <Table
       empty="No lab tests"
-      headers={["Pet", "Guardian", "Test", "Lab", "Status", "Shared"]}
+      headers={["Pet", "Guardian", "Test", "Lab", "Status", "Shared", "Actions"]}
       rows={items.map((item) => [
         item.petName,
         item.ownerName,
@@ -307,6 +316,7 @@ function LabTestsView({ items }: { items: LabTest[] }) {
         <Primary key="lab" label={item.labCenter} sublabel={labelize(item.labType)} />,
         <Status key="status" value={item.status} />,
         item.sharedWithPetParent ? "Yes" : "No",
+        <LabTestLifecycleActions key="actions" labTest={item} />,
       ])}
     />
   );

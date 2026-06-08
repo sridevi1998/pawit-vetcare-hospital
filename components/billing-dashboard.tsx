@@ -3,6 +3,7 @@
 import { AlertCircle, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { InvoiceLifecycleActions } from "@/components/lifecycle-actions";
 import { getBilling, type BillingResponse, type Invoice } from "@/lib/pawit-api";
 
 const currency = new Intl.NumberFormat("en-US", {
@@ -104,11 +105,12 @@ export function BillingDashboard({ initialBilling = null, initialError = null }:
       </div>
 
       <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
-        <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500 md:grid">
+        <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr_1.2fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-500 md:grid">
           <span>Patient</span>
           <span>Guardian</span>
           <span>Status</span>
           <span className="text-right">Amount</span>
+          <span>Actions</span>
         </div>
 
         {loading && !billing ? (
@@ -121,7 +123,7 @@ export function BillingDashboard({ initialBilling = null, initialError = null }:
           <div>
             {billing.invoices.map((invoice) => (
               <div
-                className="grid gap-3 border-b border-slate-100 px-4 py-4 text-sm last:border-b-0 md:grid-cols-[1.4fr_1fr_0.8fr_0.8fr] md:items-center md:gap-0"
+                className="grid gap-3 border-b border-slate-100 px-4 py-4 text-sm last:border-b-0 md:grid-cols-[1.4fr_1fr_0.8fr_0.8fr_1.2fr] md:items-center md:gap-0"
                 key={invoice.id}
               >
                 <div className="min-w-0">
@@ -141,6 +143,10 @@ export function BillingDashboard({ initialBilling = null, initialError = null }:
                 <div className="flex items-center justify-between gap-3 md:block">
                   <span className="text-xs font-bold uppercase text-slate-400 md:hidden">Amount</span>
                   <p className="font-bold text-slate-950 md:text-right">{cents(invoice.amount)}</p>
+                </div>
+                <div className="flex items-center justify-between gap-3 md:block">
+                  <span className="text-xs font-bold uppercase text-slate-400 md:hidden">Actions</span>
+                  <InvoiceLifecycleActions invoiceID={invoice.id} status={invoice.status} />
                 </div>
               </div>
             ))}

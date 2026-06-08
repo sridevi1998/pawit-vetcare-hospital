@@ -32,14 +32,24 @@ export type Person = components["schemas"]["Person"];
 export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 export type CreateAppointmentRequest = JsonRequest<"/api/v1/appointments", "post">;
 export type AppointmentMutationResult = JsonResponse<"/api/v1/appointments", "post", 201>;
+export type CancelAppointmentRequest = JsonRequest<"/api/v1/appointments/{id}/cancel", "post">;
+export type CancelAppointmentResult = JsonResponse<"/api/v1/appointments/{id}/cancel", "post", 200>;
 export type RegisterWalkInRequest = JsonRequest<"/api/v1/queue/walk-ins", "post">;
 export type QueueMutationResult = JsonResponse<"/api/v1/queue/walk-ins", "post", 201>;
+export type UpdateQueueRequest = components["schemas"]["UpdateQueueRequest"];
+export type QueueTransitionResult = JsonResponse<"/api/v1/queue/{id}/call", "post", 200>;
 export type CreatePetRequest = JsonRequest<"/api/v1/pets", "post">;
 export type PetMutationResult = JsonResponse<"/api/v1/pets", "post", 201>;
 export type CreatePrescriptionRequest = JsonRequest<"/api/v1/prescriptions", "post">;
 export type PrescriptionMutationResult = JsonResponse<"/api/v1/prescriptions", "post", 201>;
+export type FinalizePrescriptionRequest = JsonRequest<"/api/v1/prescriptions/{id}/finalize", "post">;
+export type FinalizePrescriptionResult = JsonResponse<"/api/v1/prescriptions/{id}/finalize", "post", 200>;
 export type CreateLabOrderRequest = JsonRequest<"/api/v1/lab-tests", "post">;
 export type LabOrderMutationResult = JsonResponse<"/api/v1/lab-tests", "post", 201>;
+export type UpdateLabOrderStatusRequest = JsonRequest<"/api/v1/lab-tests/{id}/status", "post">;
+export type UpdateLabOrderStatusResult = JsonResponse<"/api/v1/lab-tests/{id}/status", "post", 200>;
+export type UploadLabResultRequest = components["schemas"]["UploadLabResultRequest"];
+export type UploadLabResultResult = JsonResponse<"/api/v1/lab-tests/{id}/report", "post", 201>;
 export type CreateInvoiceRequest = JsonRequest<"/api/v1/billing/invoices", "post">;
 export type InvoiceMutationResult = JsonResponse<"/api/v1/billing/invoices", "post", 201>;
 export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void", "post">;
@@ -139,6 +149,17 @@ export async function createAppointment(
   return response.data;
 }
 
+export async function cancelAppointment(
+  appointmentID: string,
+  body: CancelAppointmentRequest,
+  idempotencyKey: string,
+): Promise<CancelAppointmentResult> {
+  const response = await api.post<CancelAppointmentResult>(`/api/v1/appointments/${appointmentID}/cancel`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
 export async function registerWalkIn(
   body: RegisterWalkInRequest,
   idempotencyKey: string,
@@ -147,6 +168,34 @@ export async function registerWalkIn(
     headers: { "Idempotency-Key": idempotencyKey },
   });
   return response.data;
+}
+
+async function transitionQueueEntry(
+  queueEntryID: string,
+  transition: "call" | "start" | "complete" | "cancel",
+  body: UpdateQueueRequest,
+  idempotencyKey: string,
+): Promise<QueueTransitionResult> {
+  const response = await api.post<QueueTransitionResult>(`/api/v1/queue/${queueEntryID}/${transition}`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function callQueueEntry(queueEntryID: string, body: UpdateQueueRequest, idempotencyKey: string) {
+  return transitionQueueEntry(queueEntryID, "call", body, idempotencyKey);
+}
+
+export async function startQueueEntry(queueEntryID: string, body: UpdateQueueRequest, idempotencyKey: string) {
+  return transitionQueueEntry(queueEntryID, "start", body, idempotencyKey);
+}
+
+export async function completeQueueEntry(queueEntryID: string, body: UpdateQueueRequest, idempotencyKey: string) {
+  return transitionQueueEntry(queueEntryID, "complete", body, idempotencyKey);
+}
+
+export async function cancelQueueEntry(queueEntryID: string, body: UpdateQueueRequest, idempotencyKey: string) {
+  return transitionQueueEntry(queueEntryID, "cancel", body, idempotencyKey);
 }
 
 export async function createPet(body: CreatePetRequest, idempotencyKey: string): Promise<PetMutationResult> {
@@ -166,11 +215,44 @@ export async function createPrescription(
   return response.data;
 }
 
+export async function finalizePrescription(
+  prescriptionID: string,
+  body: FinalizePrescriptionRequest,
+  idempotencyKey: string,
+): Promise<FinalizePrescriptionResult> {
+  const response = await api.post<FinalizePrescriptionResult>(`/api/v1/prescriptions/${prescriptionID}/finalize`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
 export async function createLabOrder(
   body: CreateLabOrderRequest,
   idempotencyKey: string,
 ): Promise<LabOrderMutationResult> {
   const response = await api.post<LabOrderMutationResult>("/api/v1/lab-tests", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function updateLabOrderStatus(
+  labOrderID: string,
+  body: UpdateLabOrderStatusRequest,
+  idempotencyKey: string,
+): Promise<UpdateLabOrderStatusResult> {
+  const response = await api.post<UpdateLabOrderStatusResult>(`/api/v1/lab-tests/${labOrderID}/status`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function uploadLabResult(
+  labOrderID: string,
+  body: UploadLabResultRequest,
+  idempotencyKey: string,
+): Promise<UploadLabResultResult> {
+  const response = await api.post<UploadLabResultResult>(`/api/v1/lab-tests/${labOrderID}/report`, body, {
     headers: { "Idempotency-Key": idempotencyKey },
   });
   return response.data;
