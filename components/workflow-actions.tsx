@@ -1,17 +1,15 @@
 "use client";
 
-import {
-  AlertCircle,
-  CalendarPlus,
-  CheckCircle2,
-  FilePlus2,
-  FlaskConical,
-  Loader2,
-  PawPrint,
-  Receipt,
-  Stethoscope,
-  UserPlus,
-} from "lucide-react";
+import AlertCircle from "lucide-react/dist/esm/icons/circle-alert";
+import CalendarPlus from "lucide-react/dist/esm/icons/calendar-plus";
+import CheckCircle2 from "lucide-react/dist/esm/icons/circle-check-big";
+import FilePlus2 from "lucide-react/dist/esm/icons/file-plus-2";
+import FlaskConical from "lucide-react/dist/esm/icons/flask-conical";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import PawPrint from "lucide-react/dist/esm/icons/paw-print";
+import Receipt from "lucide-react/dist/esm/icons/receipt";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope";
+import UserPlus from "lucide-react/dist/esm/icons/user-plus";
 import { useRouter } from "next/navigation";
 import type { ComponentType, FormEvent, ReactNode } from "react";
 import { useState } from "react";
