@@ -1,4 +1,5 @@
-import { AlertCircle, FileText } from "lucide-react";
+import { AlertCircle, ArrowRight, FileText } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -19,6 +20,7 @@ import {
   getBilling,
   getCalendar,
   getClinicalNotes,
+  getDashboardSummary,
   getDoctors,
   getFeedback,
   getLabTests,
@@ -32,7 +34,9 @@ import {
   type CalendarResponse,
   type ClinicalNote,
   type FeedbackResponse,
+  type Invoice,
   type LabTest,
+  type Metric,
   type Person,
   type PetRecord,
   type Prescription,
@@ -46,6 +50,7 @@ type PageProps = {
 };
 
 type SectionKey =
+  | "dashboard"
   | "appointments"
   | "calendar"
   | "queue"
@@ -67,6 +72,11 @@ type SectionConfig = {
 };
 
 const sections: Record<SectionKey, SectionConfig> = {
+  dashboard: {
+    eyebrow: "Dashboard / Overview",
+    title: "Hospital Dashboard",
+    subtitle: "A live command center for clinic activity, care load, and revenue signals.",
+  },
   appointments: {
     eyebrow: "Dashboard / Appointments",
     title: "Appointments",
@@ -156,6 +166,8 @@ export default async function HospitalSectionPage({ params }: PageProps) {
 
 async function sectionContent(section: SectionKey) {
   switch (section) {
+    case "dashboard":
+      return dataPanel(() => getDashboardData(), (data) => <DashboardView data={data} />);
     case "appointments":
       return dataPanel(() => getAppointments(), (data) => <AppointmentsView items={data.items} />);
     case "calendar":
@@ -185,6 +197,164 @@ async function sectionContent(section: SectionKey) {
     case "audit-logs":
       return dataPanel(() => getAuditLogs(), (data) => <AuditLogsView items={data.items} />);
   }
+}
+
+async function getDashboardData() {
+  const [summary, appointments, queue, billing, labs] = await Promise.all([
+    getDashboardSummary(),
+    getAppointments(),
+    getQueue(),
+    getBilling(),
+    getLabTests(),
+  ]);
+
+  return {
+    metrics: summary.metrics,
+    appointments: appointments.items.slice(0, 5),
+    queue: queue.items.slice(0, 5),
+    invoices: billing.invoices.slice(0, 5),
+    labs: labs.items.slice(0, 5),
+  };
+}
+
+function DashboardView({
+  data,
+}: {
+  data: {
+    metrics: Metric[];
+    appointments: Appointment[];
+    queue: QueueEntry[];
+    invoices: Invoice[];
+    labs: LabTest[];
+  };
+}) {
+  return (
+    <>
+      <MetricGrid items={data.metrics} />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <DashboardPanel
+          actionHref="/hospital/appointments"
+          actionLabel="Appointments"
+          empty="No appointments on the schedule"
+          title="Today's Visits"
+        >
+          {data.appointments.map((appointment) => (
+            <DashboardRow
+              badge={labelize(appointment.status)}
+              detail={`${appointment.time} / ${labelize(appointment.type)}`}
+              href="/hospital/appointments"
+              key={appointment.id}
+              label={appointment.petName}
+              sublabel={appointment.reason}
+            />
+          ))}
+        </DashboardPanel>
+
+        <DashboardPanel actionHref="/hospital/queue" actionLabel="Queue" empty="No pets waiting" title="Queue Watch">
+          {data.queue.map((entry) => (
+            <DashboardRow
+              badge={`${entry.waitMins} min`}
+              detail={`${labelize(entry.priority)} / ${labelize(entry.status)}`}
+              href="/hospital/queue"
+              key={entry.id}
+              label={entry.petName}
+              sublabel={entry.ownerName}
+            />
+          ))}
+        </DashboardPanel>
+
+        <DashboardPanel actionHref="/hospital/lab-tests" actionLabel="Labs" empty="No active lab orders" title="Lab Follow-Ups">
+          {data.labs.map((lab) => (
+            <DashboardRow
+              badge={labelize(lab.status)}
+              detail={lab.labCenter}
+              href="/hospital/lab-tests"
+              key={lab.id}
+              label={lab.testType}
+              sublabel={lab.petName}
+            />
+          ))}
+        </DashboardPanel>
+
+        <DashboardPanel actionHref="/hospital/billing" actionLabel="Billing" empty="No invoices found" title="Billing Attention">
+          {data.invoices.map((invoice) => (
+            <DashboardRow
+              badge={labelize(invoice.status)}
+              detail={invoice.dueDate}
+              href="/hospital/billing"
+              key={invoice.id}
+              label={invoice.petName}
+              sublabel={`${invoice.ownerName} / ${formatCurrency(invoice.amount)}`}
+            />
+          ))}
+        </DashboardPanel>
+      </div>
+    </>
+  );
+}
+
+function DashboardPanel({
+  actionHref,
+  actionLabel,
+  children,
+  empty,
+  title,
+}: {
+  actionHref: string;
+  actionLabel: string;
+  children: ReactNode;
+  empty: string;
+  title: string;
+}) {
+  const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
+        <h3 className="text-lg font-bold text-slate-950">{title}</h3>
+        <Link className="inline-flex items-center gap-2 text-sm font-bold text-brand hover:text-blue-700" href={actionHref}>
+          <span>{actionLabel}</span>
+          <ArrowRight size={16} />
+        </Link>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {hasRows ? (
+          children
+        ) : (
+          <div className="grid min-h-36 place-items-center px-5 py-8 text-center text-sm font-semibold text-slate-500">
+            {empty}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DashboardRow({
+  badge,
+  detail,
+  href,
+  label,
+  sublabel,
+}: {
+  badge: string;
+  detail: string;
+  href: string;
+  label: string;
+  sublabel: string;
+}) {
+  return (
+    <Link className="grid gap-3 px-5 py-4 transition hover:bg-blue-50/60 sm:grid-cols-[1fr_auto] sm:items-center" href={href}>
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-slate-950">{label}</p>
+        <p className="mt-1 truncate text-sm text-slate-500">{sublabel}</p>
+      </div>
+      <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">{badge}</span>
+        <p className="mt-0 text-xs font-medium text-slate-500 sm:mt-2">{detail}</p>
+      </div>
+    </Link>
+  );
 }
 
 async function dataPanel<T>(
@@ -479,4 +649,8 @@ function formatDate(value: string) {
     return value;
   }
   return date.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatCurrency(cents: number) {
+  return new Intl.NumberFormat("en-US", { currency: "USD", style: "currency" }).format(cents / 100);
 }

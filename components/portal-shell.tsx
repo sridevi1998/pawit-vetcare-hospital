@@ -2,6 +2,7 @@ import {
   BarChart3,
   Calendar,
   CalendarDays,
+  LayoutDashboard,
   Clipboard,
   Clock,
   DollarSign,
@@ -24,6 +25,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  { label: "Dashboard", path: "/hospital/dashboard", icon: LayoutDashboard },
   { label: "Appointments", path: "/hospital/appointments", icon: CalendarDays },
   { label: "Calendar", path: "/hospital/calendar", icon: Calendar },
   { label: "Patient Queue", path: "/hospital/queue", icon: Users },
