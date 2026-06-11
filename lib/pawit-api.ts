@@ -63,18 +63,61 @@ export type VoidInvoiceRequest = JsonRequest<"/api/v1/billing/invoices/{id}/void
 export type VoidInvoiceResult = JsonResponse<"/api/v1/billing/invoices/{id}/void", "post", 200>;
 export type CreateStaffRequest = JsonRequest<"/api/v1/staff", "post">;
 export type StaffMutationResult = JsonResponse<"/api/v1/staff", "post", 201>;
+export type LoginRequest = { email: string; password: string; tenantId?: string; hospitalId?: string; role?: string };
+export type AuthSession = {
+  userId: string;
+  tenantId: string;
+  role: string;
+  displayName: string;
+  email: string;
+  token: string;
+  expiresAt: string;
+};
+export type CurrentUserResponse = {
+  user: {
+    id: string;
+    role: string;
+    tenantId: string;
+  };
+  clinic: {
+    name: string;
+    type: string;
+  };
+};
 
 const runtimeConfig = typeof window === "undefined" ? {} : window.__PAWIT_CONFIG__ ?? {};
+let serverAuthToken = "";
+
+export function setServerAuthToken(token: string) {
+  serverAuthToken = token;
+}
 
 const api = axios.create({
   baseURL: runtimeConfig.apiBaseUrl || process.env.NEXT_PUBLIC_PAWIT_API_BASE_URL || "http://localhost:8080",
-  headers: {
-    "X-PawIt-Tenant-ID": runtimeConfig.tenantId || process.env.NEXT_PUBLIC_PAWIT_TENANT_ID,
-    "X-PawIt-User-ID": runtimeConfig.userId || process.env.NEXT_PUBLIC_PAWIT_USER_ID,
-    "X-PawIt-Role": runtimeConfig.role || process.env.NEXT_PUBLIC_PAWIT_ROLE,
-  },
   withCredentials: true,
 });
+
+api.interceptors.request.use((config) => {
+  const token = typeof window === "undefined" ? serverAuthToken : "";
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export async function login(body: LoginRequest): Promise<AuthSession> {
+  const response = await api.post<AuthSession>("/api/v1/auth/login", body);
+  return response.data;
+}
+
+export async function logout(): Promise<void> {
+  await api.post("/api/v1/auth/logout");
+}
+
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  const response = await api.get<CurrentUserResponse>("/api/v1/me");
+  return response.data;
+}
 
 export async function getBilling(): Promise<BillingResponse> {
   const response = await api.get<BillingResponse>("/api/v1/billing");

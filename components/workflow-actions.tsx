@@ -32,6 +32,7 @@ import {
 } from "@/lib/pawit-api";
 
 type WorkflowActionsProps = {
+  role: string;
   section: string;
 };
 
@@ -50,21 +51,21 @@ type ActionFrameProps = {
 const locationDefault = "loc_001";
 const petDefault = "pet_001";
 
-export function WorkflowActions({ section }: WorkflowActionsProps) {
+export function WorkflowActions({ role, section }: WorkflowActionsProps) {
   switch (section) {
     case "appointments":
     case "calendar":
-      return <AppointmentAction />;
+      return role === "PetParent" ? <AppointmentAction requestedByPetParent /> : <AppointmentAction />;
     case "queue":
       return <WalkInAction />;
     case "patients":
       return <PetAction />;
     case "prescriptions":
-      return <PrescriptionAction />;
+      return role === "PetParent" ? null : <PrescriptionAction />;
     case "lab-tests":
-      return <LabOrderAction />;
+      return role === "LabTechnician" || role === "PetParent" ? null : <LabOrderAction />;
     case "billing":
-      return <InvoiceAction />;
+      return role === "PetParent" ? null : <InvoiceAction />;
     case "staff":
       return <StaffAction />;
     default:
@@ -72,7 +73,7 @@ export function WorkflowActions({ section }: WorkflowActionsProps) {
   }
 }
 
-function AppointmentAction() {
+function AppointmentAction({ requestedByPetParent = false }: { requestedByPetParent?: boolean }) {
   const { handleSubmit, status } = useMutationForm(async (formData) => {
     const startsAt = optionalDateTime(formData, "startsAt");
     const endsAt = optionalDateTime(formData, "endsAt");
@@ -81,17 +82,17 @@ function AppointmentAction() {
       petId: textValue(formData, "petId", petDefault),
       type: textValue(formData, "type", "in_clinic") as CreateAppointmentRequest["type"],
       reason: textValue(formData, "reason", "Routine consultation"),
-      requestedByPetParent: false,
+      requestedByPetParent,
       ...(startsAt ? { startsAt } : {}),
       ...(endsAt ? { endsAt } : {}),
     };
 
     await createAppointment(request, idempotencyKey());
-    return "Appointment created.";
+    return requestedByPetParent ? "Appointment request submitted." : "Appointment created.";
   });
 
   return (
-    <ActionFrame icon={CalendarPlus} status={status} title="New appointment">
+    <ActionFrame icon={CalendarPlus} status={status} title={requestedByPetParent ? "Request appointment" : "New appointment"}>
       <form className="grid gap-4 md:grid-cols-4" onSubmit={handleSubmit}>
         <Field defaultValue={locationDefault} label="Location ID" name="locationId" required />
         <Field defaultValue={petDefault} label="Pet ID" name="petId" required />

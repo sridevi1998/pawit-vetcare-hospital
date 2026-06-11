@@ -2,6 +2,7 @@ import {
   BarChart3,
   Calendar,
   CalendarDays,
+  LayoutDashboard,
   Clipboard,
   Clock,
   DollarSign,
@@ -17,26 +18,31 @@ import {
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
+import { LogoutButton } from "@/components/auth-actions";
+import { sectionsForRole, type SectionKey } from "@/lib/role-access";
+
 type NavItem = {
   label: string;
   path: string;
   icon: ComponentType<{ className?: string; size?: number }>;
+  section: SectionKey;
 };
 
 const navItems: NavItem[] = [
-  { label: "Appointments", path: "/hospital/appointments", icon: CalendarDays },
-  { label: "Calendar", path: "/hospital/calendar", icon: Calendar },
-  { label: "Patient Queue", path: "/hospital/queue", icon: Users },
-  { label: "Pet Records", path: "/hospital/patients", icon: FileText },
-  { label: "Prescriptions", path: "/hospital/prescriptions", icon: Clipboard },
-  { label: "Clinical Notes", path: "/hospital/clinical-notes", icon: MessageSquare },
-  { label: "Lab & Diagnostics", path: "/hospital/lab-tests", icon: FlaskConical },
-  { label: "Billing", path: "/hospital/billing", icon: DollarSign },
-  { label: "Analytics", path: "/hospital/analytics", icon: BarChart3 },
-  { label: "Feedback", path: "/hospital/feedback", icon: Star },
-  { label: "Staff Management", path: "/hospital/staff", icon: UserCog },
-  { label: "Veterinarian Management", path: "/hospital/doctors", icon: Clock },
-  { label: "Audit Logs", path: "/hospital/audit-logs", icon: ShieldCheck },
+  { label: "Dashboard", path: "/hospital/dashboard", section: "dashboard", icon: LayoutDashboard },
+  { label: "Appointments", path: "/hospital/appointments", section: "appointments", icon: CalendarDays },
+  { label: "Calendar", path: "/hospital/calendar", section: "calendar", icon: Calendar },
+  { label: "Patient Queue", path: "/hospital/queue", section: "queue", icon: Users },
+  { label: "Pet Records", path: "/hospital/patients", section: "patients", icon: FileText },
+  { label: "Prescriptions", path: "/hospital/prescriptions", section: "prescriptions", icon: Clipboard },
+  { label: "Clinical Notes", path: "/hospital/clinical-notes", section: "clinical-notes", icon: MessageSquare },
+  { label: "Lab & Diagnostics", path: "/hospital/lab-tests", section: "lab-tests", icon: FlaskConical },
+  { label: "Billing", path: "/hospital/billing", section: "billing", icon: DollarSign },
+  { label: "Analytics", path: "/hospital/analytics", section: "analytics", icon: BarChart3 },
+  { label: "Feedback", path: "/hospital/feedback", section: "feedback", icon: Star },
+  { label: "Staff Management", path: "/hospital/staff", section: "staff", icon: UserCog },
+  { label: "Veterinarian Management", path: "/hospital/doctors", section: "doctors", icon: Clock },
+  { label: "Audit Logs", path: "/hospital/audit-logs", section: "audit-logs", icon: ShieldCheck },
 ];
 
 type PortalShellProps = {
@@ -45,9 +51,13 @@ type PortalShellProps = {
   eyebrow: string;
   title: string;
   subtitle: string;
+  userRole: string;
 };
 
-export function PortalShell({ activePath, children, eyebrow, title, subtitle }: PortalShellProps) {
+export function PortalShell({ activePath, children, eyebrow, title, subtitle, userRole }: PortalShellProps) {
+  const allowedSections = sectionsForRole(userRole);
+  const visibleNavItems = navItems.filter((item) => allowedSections.includes(item.section));
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-white p-6 lg:block">
@@ -61,7 +71,7 @@ export function PortalShell({ activePath, children, eyebrow, title, subtitle }: 
           </div>
         </div>
         <nav className="mt-10 space-y-1 text-sm font-semibold text-slate-600">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const active = item.path === activePath;
             return (
@@ -81,10 +91,18 @@ export function PortalShell({ activePath, children, eyebrow, title, subtitle }: 
         </nav>
       </aside>
       <section className="lg:pl-72">
-        <header className="border-b border-slate-200 bg-white px-6 py-5 sm:px-8">
-          <p className="text-sm font-medium text-slate-500">{eyebrow}</p>
-          <h2 className="mt-1 text-3xl font-bold">{title}</h2>
-          <p className="mt-1 text-slate-500">{subtitle}</p>
+        <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:px-8">
+          <div>
+            <p className="text-sm font-medium text-slate-500">{eyebrow}</p>
+            <h2 className="mt-1 text-3xl font-bold">{title}</h2>
+            <p className="mt-1 text-slate-500">{subtitle}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-sm font-bold text-brand ring-1 ring-blue-100 sm:inline-flex">
+              {userRole}
+            </span>
+            <LogoutButton />
+          </div>
         </header>
         <div className="space-y-6 p-6 sm:p-8">{children}</div>
       </section>

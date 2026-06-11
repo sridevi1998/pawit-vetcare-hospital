@@ -41,7 +41,7 @@ NEXT_PUBLIC_PAWIT_ROLE=ClinicAdmin \
 npm run dev
 ```
 
-The hospital portal is available at `/hospital/appointments` and includes read pages for appointments, calendar, queue, pet records, prescriptions, clinical notes, labs, billing, analytics, feedback, doctors, staff, and audit logs.
+The hospital portal is available at `/hospital/dashboard` and includes read pages for dashboard overview, appointments, calendar, queue, pet records, prescriptions, clinical notes, labs, billing, analytics, feedback, doctors, staff, and audit logs.
 
 Typed API helpers live in `lib/pawit-api.ts` with the local billing contract types in `lib/pawit-api-types.ts`.
 
