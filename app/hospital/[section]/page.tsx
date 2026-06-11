@@ -1,6 +1,7 @@
 import { AlertCircle, ArrowRight, FileText } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { BillingDashboard } from "@/components/billing-dashboard";
@@ -20,6 +21,7 @@ import {
   getBilling,
   getCalendar,
   getClinicalNotes,
+  getCurrentUser,
   getDashboardSummary,
   getDoctors,
   getFeedback,
@@ -28,6 +30,7 @@ import {
   getPrescriptions,
   getQueue,
   getStaff,
+  setServerAuthToken,
   type AuditLogEntry,
   type Analytics,
   type Appointment,
@@ -42,28 +45,13 @@ import {
   type Prescription,
   type QueueEntry,
 } from "@/lib/pawit-api";
+import { canAccessSection, canUseSectionActions, type SectionKey } from "@/lib/role-access";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ section: string }>;
 };
-
-type SectionKey =
-  | "dashboard"
-  | "appointments"
-  | "calendar"
-  | "queue"
-  | "patients"
-  | "prescriptions"
-  | "clinical-notes"
-  | "lab-tests"
-  | "billing"
-  | "analytics"
-  | "feedback"
-  | "doctors"
-  | "staff"
-  | "audit-logs";
 
 type SectionConfig = {
   eyebrow: string;
@@ -149,16 +137,42 @@ function isSection(value: string): value is SectionKey {
 }
 
 export default async function HospitalSectionPage({ params }: PageProps) {
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.get("pawit_access")?.value ?? "";
+  if (!authCookie) {
+    redirect("/login");
+  }
+  setServerAuthToken(authCookie);
+
   const { section } = await params;
   if (!isSection(section)) {
     notFound();
   }
 
+  const currentUser = await getCurrentUser();
+  const role = currentUser.user.role;
   const config = sections[section];
+  if (!canAccessSection(role, section)) {
+    return (
+      <PortalShell activePath="" eyebrow="Access Control" title="Access Restricted" subtitle="This workspace is not available for your role." userRole={role}>
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <div className="flex gap-3">
+            <AlertCircle className="mt-0.5 shrink-0" size={20} />
+            <div>
+              <h3 className="font-bold">Role access required</h3>
+              <p className="mt-2 text-sm leading-6">
+                Your signed-in role is <span className="font-bold">{role}</span>. Choose an available section from the sidebar or sign in with a different assigned role.
+              </p>
+            </div>
+          </div>
+        </section>
+      </PortalShell>
+    );
+  }
 
   return (
-    <PortalShell activePath={`/hospital/${section}`} eyebrow={config.eyebrow} title={config.title} subtitle={config.subtitle}>
-      <WorkflowActions section={section} />
+    <PortalShell activePath={`/hospital/${section}`} eyebrow={config.eyebrow} title={config.title} subtitle={config.subtitle} userRole={role}>
+      {canUseSectionActions(role, section) ? <WorkflowActions role={role} section={section} /> : null}
       {await sectionContent(section)}
     </PortalShell>
   );
