@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a role-scoped authenticated session */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clear the authenticated session cookie */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -98,6 +132,26 @@ export interface paths {
         };
         /** Get hospital portal navigation sections */
         get: operations["getNavigation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List active clinic locations
+         * @description Returns basic active clinic location metadata used by appointment, queue, pet record, clinical, lab, billing, and staff workflows.
+         */
+        get: operations["listClinicLocations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -386,7 +440,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant prescriptions */
+        /**
+         * List tenant prescriptions
+         * @description Pet-parent callers with only shared-record permissions receive only prescriptions shared with them for pets where they are active guardians with record-view access.
+         */
         get: operations["listPrescriptions"];
         put?: never;
         /**
@@ -444,10 +501,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List clinical notes and consultations */
+        /**
+         * List clinical notes and consultations
+         * @description Pet-parent callers with only shared-record permissions receive only clinical notes shared with them for pets where they are active guardians with record-view access.
+         */
         get: operations["listClinicalNotes"];
         put?: never;
-        post?: never;
+        /**
+         * Create a draft SOAP/clinical note
+         * @description Veterinarians and vet technicians can create draft clinical notes. Finalization remains a separate veterinarian workflow.
+         */
+        post: operations["createClinicalNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical-notes/{id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finalize a draft SOAP/clinical note
+         * @description Veterinarians can finalize a draft clinical note and optionally share it with the pet parent.
+         */
+        post: operations["finalizeClinicalNote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -461,7 +545,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List lab tests and diagnostic reports */
+        /**
+         * List lab tests and diagnostic reports
+         * @description Pet-parent callers with only shared-record permissions receive only lab results shared with them for pets where they are active guardians with record-view access.
+         */
         get: operations["listLabTests"];
         put?: never;
         /** Create an internal or external lab order */
@@ -674,6 +761,32 @@ export interface components {
                 message: string;
             };
         };
+        LoginRequest: {
+            /** @description Friendly hospital portal identifier, such as HOSP-001. */
+            hospitalId?: string;
+            /** @description Tenant identifier for direct API clients. */
+            tenantId?: string;
+            /** Format: email */
+            email: string;
+            /** Format: password */
+            password: string;
+            role?: components["schemas"]["Role"];
+        };
+        AuthSession: {
+            userId: string;
+            tenantId: string;
+            role: components["schemas"]["Role"];
+            displayName: string;
+            /** Format: email */
+            email: string;
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        LogoutResponse: {
+            /** @constant */
+            status: "signed_out";
+        };
         MeResponse: {
             user: {
                 id: string;
@@ -758,6 +871,18 @@ export interface components {
             label: string;
             path: string;
             icon: string;
+        };
+        ClinicLocationList: {
+            items: components["schemas"]["ClinicLocation"][];
+        };
+        ClinicLocation: {
+            id: string;
+            name: string;
+            timezone: string;
+            phone?: string;
+            /** Format: email */
+            email?: string;
+            status: string;
         };
         MetricList: {
             metrics: components["schemas"]["Metric"][];
@@ -973,6 +1098,28 @@ export interface components {
             updatedAt: string;
             sharedWithPetParent: boolean;
         };
+        /** @description At least one clinical note field is required across reasonForVisit, subjective, objective, assessment, or plan. */
+        CreateClinicalNoteRequest: {
+            locationId: string;
+            petId: string;
+            appointmentId?: string;
+            reasonForVisit?: string;
+            subjective?: string;
+            objective?: string;
+            assessment?: string;
+            plan?: string;
+            vitals?: {
+                [key: string]: unknown;
+            };
+            sharedWithPetParent?: boolean;
+        };
+        ClinicalNoteMutationResult: {
+            clinicalNote: components["schemas"]["ClinicalNote"];
+            idempotent?: boolean;
+        };
+        FinalizeClinicalNoteRequest: {
+            shareWithPetParent?: boolean;
+        };
         LabTestList: {
             items: components["schemas"]["LabTest"][];
         };
@@ -1143,6 +1290,8 @@ export interface components {
         /** @description Invalid request */
         BadRequest: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1152,6 +1301,8 @@ export interface components {
         /** @description Authentication required */
         Unauthorized: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1161,6 +1312,8 @@ export interface components {
         /** @description Role does not have required permission */
         Forbidden: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1170,6 +1323,8 @@ export interface components {
         /** @description Resource not found in tenant scope */
         NotFound: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1179,6 +1334,21 @@ export interface components {
         /** @description State conflict or idempotency-key conflict */
         Conflict: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Request rate limit exceeded */
+        TooManyRequests: {
+            headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
+                /** @description Seconds to wait before retrying the request. */
+                "Retry-After"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1188,6 +1358,8 @@ export interface components {
         /** @description Service dependency unavailable */
         ServiceUnavailable: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1197,6 +1369,8 @@ export interface components {
         /** @description Queue entry updated */
         QueueMutationOK: {
             headers: {
+                /** @description Request correlation identifier for support and tracing. */
+                "X-Request-ID"?: string;
                 [name: string]: unknown;
             };
             content: {
@@ -1236,6 +1410,8 @@ export interface operations {
             /** @description Service is alive */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1243,6 +1419,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getReadiness: {
@@ -1257,6 +1434,8 @@ export interface operations {
             /** @description Service dependencies are ready */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1264,7 +1443,64 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated session */
+            200: {
+                headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
+                    /** @description HttpOnly pawit_access session cookie. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session cleared */
+            200: {
+                headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
+                    /** @description Expired pawit_access session cookie. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResponse"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getCurrentUser: {
@@ -1279,6 +1515,8 @@ export interface operations {
             /** @description Current user context */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1286,6 +1524,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getProductSpec: {
@@ -1300,6 +1539,8 @@ export interface operations {
             /** @description Product policy */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1307,6 +1548,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listRolePolicies: {
@@ -1321,6 +1563,8 @@ export interface operations {
             /** @description Role policies */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1328,6 +1572,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getNavigation: {
@@ -1342,6 +1587,8 @@ export interface operations {
             /** @description Navigation sections */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1349,6 +1596,32 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listClinicLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active clinic locations */
+            200: {
+                headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicLocationList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getDashboardSummary: {
@@ -1363,6 +1636,8 @@ export interface operations {
             /** @description Dashboard metrics */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1370,6 +1645,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listAppointments: {
@@ -1384,6 +1660,8 @@ export interface operations {
             /** @description Appointment list */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1391,6 +1669,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createAppointment: {
@@ -1412,6 +1691,8 @@ export interface operations {
             /** @description Appointment created */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1422,6 +1703,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     cancelAppointment: {
@@ -1446,6 +1728,8 @@ export interface operations {
             /** @description Appointment cancelled */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1457,6 +1741,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getCalendar: {
@@ -1471,6 +1756,8 @@ export interface operations {
             /** @description Calendar data */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1478,6 +1765,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listQueueEntries: {
@@ -1492,6 +1780,8 @@ export interface operations {
             /** @description Queue entries */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1499,6 +1789,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     registerWalkIn: {
@@ -1520,6 +1811,8 @@ export interface operations {
             /** @description Walk-in registered */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1530,6 +1823,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     callQueueEntry: {
@@ -1552,6 +1846,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     startQueueEntry: {
@@ -1574,6 +1869,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     completeQueueEntry: {
@@ -1596,6 +1892,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     cancelQueueEntry: {
@@ -1618,6 +1915,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPets: {
@@ -1632,6 +1930,8 @@ export interface operations {
             /** @description Pet records */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1639,6 +1939,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createPet: {
@@ -1660,6 +1961,8 @@ export interface operations {
             /** @description Pet created */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1670,6 +1973,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     archivePet: {
@@ -1694,6 +1998,8 @@ export interface operations {
             /** @description Pet archived */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1705,6 +2011,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPetDocuments: {
@@ -1722,6 +2029,8 @@ export interface operations {
             /** @description Pet document metadata */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1732,6 +2041,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     uploadPetDocument: {
@@ -1756,6 +2066,8 @@ export interface operations {
             /** @description Document metadata registered */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1767,6 +2079,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     archivePetDocument: {
@@ -1793,6 +2106,8 @@ export interface operations {
             /** @description Document metadata archived */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1804,6 +2119,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPatients: {
@@ -1818,6 +2134,8 @@ export interface operations {
             /** @description Pet records */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1825,6 +2143,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPrescriptions: {
@@ -1839,6 +2158,8 @@ export interface operations {
             /** @description Prescription drafts and finalized prescriptions */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1847,6 +2168,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createPrescription: {
@@ -1868,6 +2190,8 @@ export interface operations {
             /** @description Prescription draft created */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1878,6 +2202,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     finalizePrescription: {
@@ -1902,6 +2227,8 @@ export interface operations {
             /** @description Prescription finalized */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1913,6 +2240,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPrescriptionTemplates: {
@@ -1927,6 +2255,8 @@ export interface operations {
             /** @description Prescription templates */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1934,6 +2264,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listClinicalNotes: {
@@ -1948,6 +2279,8 @@ export interface operations {
             /** @description Clinical notes */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1955,6 +2288,79 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    createClinicalNote: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClinicalNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Clinical note draft created */
+            201: {
+                headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicalNoteMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    finalizeClinicalNote: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Safe retry key for mutation requests. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Resource identifier. */
+                id: components["parameters"]["PathID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinalizeClinicalNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Clinical note finalized */
+            200: {
+                headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicalNoteMutationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listLabTests: {
@@ -1969,6 +2375,8 @@ export interface operations {
             /** @description Lab tests */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1976,6 +2384,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createLabOrder: {
@@ -1997,6 +2406,8 @@ export interface operations {
             /** @description Lab order created */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2007,6 +2418,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     updateLabOrderStatus: {
@@ -2031,6 +2443,8 @@ export interface operations {
             /** @description Lab order status updated */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2042,6 +2456,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     uploadLabResult: {
@@ -2066,6 +2481,8 @@ export interface operations {
             /** @description Lab result uploaded */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2077,6 +2494,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getBilling: {
@@ -2091,6 +2509,8 @@ export interface operations {
             /** @description Billing dashboard */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2098,6 +2518,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createInvoice: {
@@ -2119,6 +2540,8 @@ export interface operations {
             /** @description Invoice created */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2129,6 +2552,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     voidInvoice: {
@@ -2153,6 +2577,8 @@ export interface operations {
             /** @description Invoice voided */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2164,6 +2590,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getAnalytics: {
@@ -2178,6 +2605,8 @@ export interface operations {
             /** @description Analytics */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2185,6 +2614,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getFeedback: {
@@ -2199,6 +2629,8 @@ export interface operations {
             /** @description Feedback dashboard */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2206,6 +2638,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listDoctors: {
@@ -2220,6 +2653,8 @@ export interface operations {
             /** @description Veterinarians */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2227,6 +2662,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listStaff: {
@@ -2241,6 +2677,8 @@ export interface operations {
             /** @description Staff members */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2248,6 +2686,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createStaff: {
@@ -2269,6 +2708,8 @@ export interface operations {
             /** @description Staff member invited or reactivated */
             201: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2279,6 +2720,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listAuditLogs: {
@@ -2293,6 +2735,8 @@ export interface operations {
             /** @description Audit log entries */
             200: {
                 headers: {
+                    /** @description Request correlation identifier for support and tracing. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2301,6 +2745,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
 }
