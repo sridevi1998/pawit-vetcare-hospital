@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, FileText } from "lucide-react";
+import { AlertCircle, ArrowRight, CalendarCheck, FileText, HeartPulse, ReceiptText, UsersRound } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -242,8 +242,45 @@ function DashboardView({
     labs: LabTest[];
   };
 }) {
+  const waitingCount = data.queue.filter((entry) => entry.status !== "completed" && entry.status !== "cancelled").length;
+  const labFollowUps = data.labs.filter((lab) => lab.status !== "completed" && lab.status !== "cancelled").length;
+  const openInvoiceTotal = data.invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+
   return (
     <>
+      <section className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+        <div>
+          <p className="text-sm font-bold uppercase text-brand">Today at PawIt</p>
+          <h3 className="mt-2 max-w-3xl text-3xl font-bold leading-tight text-slate-950">
+            Keep the care team aligned from check-in through checkout.
+          </h3>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            This workspace pulls scheduling, queue pressure, clinical follow-ups, diagnostics, and billing into one
+            signed-in view with role-based actions.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <HeroSignal icon={<CalendarCheck size={18} />} label="Visits" value={String(data.appointments.length)} />
+            <HeroSignal icon={<UsersRound size={18} />} label="Waiting" value={String(waitingCount)} />
+            <HeroSignal icon={<ReceiptText size={18} />} label="Open AR" value={formatCurrency(openInvoiceTotal)} />
+          </div>
+        </div>
+        <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-lg bg-white text-brand shadow-sm">
+              <HeartPulse size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-950">Care Load</p>
+              <p className="text-xs font-medium text-slate-500">Operational priority</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            <PriorityLine label="Queue flow" value={`${waitingCount} active`} />
+            <PriorityLine label="Lab follow-ups" value={`${labFollowUps} pending`} />
+            <PriorityLine label="Billing review" value={`${data.invoices.length} invoices`} />
+          </div>
+        </div>
+      </section>
       <MetricGrid items={data.metrics} />
       <div className="grid gap-5 xl:grid-cols-2">
         <DashboardPanel
@@ -304,6 +341,27 @@ function DashboardView({
         </DashboardPanel>
       </div>
     </>
+  );
+}
+
+function HeroSignal({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+        <span className="text-brand">{icon}</span>
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function PriorityLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-blue-100 pb-3 last:border-0 last:pb-0">
+      <span className="text-sm font-medium text-slate-600">{label}</span>
+      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-brand ring-1 ring-blue-100">{value}</span>
+    </div>
   );
 }
 
