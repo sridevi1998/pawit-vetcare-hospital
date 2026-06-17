@@ -8,6 +8,7 @@ import { useState } from "react";
 import { login } from "@/lib/pawit-api";
 
 const roles = [
+  { label: "Super Admin", value: "SuperAdmin" },
   { label: "Clinic Admin", value: "ClinicAdmin" },
   { label: "Veterinarian", value: "Veterinarian" },
   { label: "Receptionist", value: "Receptionist" },
@@ -15,6 +16,16 @@ const roles = [
   { label: "Lab Technician", value: "LabTechnician" },
   { label: "Pet Parent", value: "PetParent" },
 ];
+
+const demoEmails: Record<string, string> = {
+  SuperAdmin: "superadmin@pawit.example",
+  ClinicAdmin: "admin@pawit.example",
+  Veterinarian: "doctor@pawit.example",
+  Receptionist: "frontdesk@pawit.example",
+  VetTechnician: "tech@pawit.example",
+  LabTechnician: "lab@pawit.example",
+  PetParent: "parent@pawit.example",
+};
 
 export function LoginForm() {
   const router = useRouter();
@@ -100,7 +111,13 @@ export function LoginForm() {
               Role
               <select
                 className="mt-1 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100"
-                onChange={(event) => setRole(event.target.value)}
+                onChange={(event) => {
+                  const nextRole = event.target.value;
+                  setRole(nextRole);
+                  if (demoEmails[nextRole]) {
+                    setEmail(demoEmails[nextRole]);
+                  }
+                }}
                 value={role}
               >
                 {roles.map((item) => (

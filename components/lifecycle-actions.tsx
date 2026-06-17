@@ -19,6 +19,7 @@ import {
   cancelAppointment,
   cancelQueueEntry,
   completeQueueEntry,
+  finalizeClinicalNote,
   finalizePrescription,
   startQueueEntry,
   updateLabOrderStatus,
@@ -26,6 +27,7 @@ import {
   uploadPetDocument,
   voidInvoice,
   type Appointment,
+  type ClinicalNote,
   type LabTest,
   type PetRecord,
   type QueueEntry,
@@ -160,6 +162,29 @@ export function PrescriptionLifecycleActions({ prescriptionID, status }: { presc
         onClick={() =>
           mutation.run(() =>
             finalizePrescription(prescriptionID, { shareWithPetParent: true }, idempotencyKey()).then(() => undefined),
+          )
+        }
+      />
+    </ActionStack>
+  );
+}
+
+export function ClinicalNoteLifecycleActions({ note }: { note: ClinicalNote }) {
+  const mutation = useMutation();
+
+  if (note.status !== "draft") {
+    return <MutedText>Finalized</MutedText>;
+  }
+
+  return (
+    <ActionStack status={mutation.status}>
+      <TinyButton
+        icon={<CheckCircle2 size={14} />}
+        label="Finalize"
+        loading={mutation.status.kind === "submitting"}
+        onClick={() =>
+          mutation.run(() =>
+            finalizeClinicalNote(note.id, { shareWithPetParent: true }, idempotencyKey()).then(() => undefined),
           )
         }
       />

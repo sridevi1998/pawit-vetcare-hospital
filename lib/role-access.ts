@@ -21,10 +21,11 @@ export type SectionKey =
   | "feedback"
   | "doctors"
   | "staff"
+  | "tenants"
   | "audit-logs";
 
 const roleSections: Record<PawItRole, SectionKey[]> = {
-  SuperAdmin: ["dashboard", "audit-logs"],
+  SuperAdmin: ["dashboard", "tenants", "audit-logs"],
   ClinicAdmin: [
     "dashboard",
     "appointments",
@@ -82,7 +83,7 @@ const roleSections: Record<PawItRole, SectionKey[]> = {
 };
 
 const roleActions: Record<PawItRole, SectionKey[]> = {
-  SuperAdmin: [],
+  SuperAdmin: ["tenants"],
   ClinicAdmin: ["appointments", "calendar", "queue", "patients", "prescriptions", "clinical-notes", "lab-tests", "billing", "staff"],
   Veterinarian: ["appointments", "calendar", "queue", "prescriptions", "clinical-notes", "lab-tests"],
   Receptionist: ["appointments", "calendar", "queue", "patients", "lab-tests", "billing"],

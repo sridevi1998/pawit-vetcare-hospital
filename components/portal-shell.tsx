@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Building2,
   Calendar,
   CalendarDays,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { label: "Feedback", path: "/hospital/feedback", section: "feedback", icon: Star },
   { label: "Staff Management", path: "/hospital/staff", section: "staff", icon: UserCog },
   { label: "Veterinarian Management", path: "/hospital/doctors", section: "doctors", icon: Clock },
+  { label: "Tenant Management", path: "/hospital/tenants", section: "tenants", icon: Building2 },
   { label: "Audit Logs", path: "/hospital/audit-logs", section: "audit-logs", icon: ShieldCheck },
 ];
 

@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, CalendarCheck, FileText, HeartPulse, ReceiptText, UsersRound } from "lucide-react";
+import { AlertCircle, ArrowRight, CalendarCheck, FileText, HeartPulse, ReceiptText, ShieldCheck, UsersRound } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { BillingDashboard } from "@/components/billing-dashboard";
 import {
   AppointmentLifecycleActions,
+  ClinicalNoteLifecycleActions,
   LabTestLifecycleActions,
   PatientLifecycleActions,
   PrescriptionLifecycleActions,
@@ -30,6 +31,7 @@ import {
   getPrescriptions,
   getQueue,
   getStaff,
+  getTenants,
   setServerAuthToken,
   type AuditLogEntry,
   type Analytics,
@@ -44,6 +46,7 @@ import {
   type PetRecord,
   type Prescription,
   type QueueEntry,
+  type Tenant,
 } from "@/lib/pawit-api";
 import { canAccessSection, canUseSectionActions, type SectionKey } from "@/lib/role-access";
 
@@ -124,6 +127,11 @@ const sections: Record<SectionKey, SectionConfig> = {
     eyebrow: "Staff / Team",
     title: "Staff Management",
     subtitle: "Clinic staff roster and operational roles.",
+  },
+  tenants: {
+    eyebrow: "Admin / Tenants",
+    title: "Tenant Management",
+    subtitle: "Platform tenant directory, clinic locations, and rollout status.",
   },
   "audit-logs": {
     eyebrow: "Admin / Audit Logs",
@@ -208,6 +216,8 @@ async function sectionContent(section: SectionKey) {
       return dataPanel(() => getDoctors(), (data) => <PeopleView items={data.items} specialty />);
     case "staff":
       return dataPanel(() => getStaff(), (data) => <PeopleView items={data.items} />);
+    case "tenants":
+      return dataPanel(() => getTenants(), (data) => <TenantsView items={data.items} />);
     case "audit-logs":
       return dataPanel(() => getAuditLogs(), (data) => <AuditLogsView items={data.items} />);
   }
@@ -517,7 +527,7 @@ function ClinicalNotesView({ items }: { items: ClinicalNote[] }) {
   return (
     <Table
       empty="No clinical notes"
-      headers={["Pet", "Guardian", "Subject", "Status", "Shared", "Updated"]}
+      headers={["Pet", "Guardian", "Subject", "Status", "Shared", "Updated", "Actions"]}
       rows={items.map((item) => [
         item.petName,
         item.ownerName,
@@ -525,6 +535,7 @@ function ClinicalNotesView({ items }: { items: ClinicalNote[] }) {
         <Status key="status" value={item.status} />,
         item.sharedWithPetParent ? "Yes" : "No",
         formatDate(item.updatedAt),
+        <ClinicalNoteLifecycleActions key="actions" note={item} />,
       ])}
     />
   );
@@ -595,19 +606,155 @@ function FeedbackView({ data }: { data: FeedbackResponse }) {
 }
 
 function AuditLogsView({ items }: { items: AuditLogEntry[] }) {
+  const mutationCount = items.length;
+  const actorCount = new Set(items.map((item) => item.actorUserId).filter(Boolean)).size;
+  const archivedCount = items.filter((item) => item.action.includes("archive") || item.action.includes("void") || item.action.includes("cancel")).length;
+  const latest = items[0]?.createdAt ?? "";
+
   return (
-    <Table
-      empty="No audit log entries"
-      headers={["Action", "Resource", "Actor", "Role", "Reason", "Created"]}
-      rows={items.map((item) => [
-        labelize(item.action),
-        <Primary key="resource" label={labelize(item.resourceType)} sublabel={item.resourceId} />,
-        item.actorUserId ?? "",
-        item.actorRole ?? "",
-        item.reason ?? "",
-        formatDate(item.createdAt),
-      ])}
-    />
+    <>
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.42fr)]">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-blue-50 text-brand ring-1 ring-blue-100">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-950">Tenant Activity Review</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                Trace administrative and clinical mutations by actor, role, resource, and stated reason before records
+                leave the operational window.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+          <p className="text-sm font-bold uppercase">Retention Guardrail</p>
+          <p className="mt-2 text-sm leading-6">
+            Archived, voided, and cancelled records stay visible here for admin review instead of disappearing from
+            tenant history.
+          </p>
+        </div>
+      </section>
+
+      <MetricGrid
+        items={[
+          { label: "Recent Events", value: String(mutationCount), delta: "Tenant-scoped mutation history" },
+          { label: "Actors", value: String(actorCount), delta: "Users represented in this window" },
+          { label: "Sensitive Actions", value: String(archivedCount), delta: "Archive, void, or cancellation activity" },
+          { label: "Latest Event", value: latest ? formatDate(latest) : "None", delta: latest ? formatTime(latest) : "No audit activity" },
+        ]}
+      />
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {items.length > 0 ? (
+          items.map((item) => <AuditLogCard item={item} key={item.id} />)
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm xl:col-span-2">
+            <FileText className="mx-auto mb-3 text-slate-400" size={38} />
+            <p className="font-semibold">No audit log entries</p>
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+function TenantsView({ items }: { items: Tenant[] }) {
+  const locationCount = items.reduce((count, tenant) => count + tenant.locations.length, 0);
+  const activeCount = items.filter((tenant) => tenant.status === "active").length;
+  const averageCutoff =
+    items.length === 0
+      ? 0
+      : Math.round(
+          items.reduce((total, tenant) => total + (tenant.defaultCancellationCutoffHours ?? 0), 0) / items.length,
+        );
+
+  return (
+    <>
+      <MetricGrid
+        items={[
+          { label: "Tenants", value: String(items.length), delta: "Platform clinic accounts" },
+          { label: "Active Tenants", value: String(activeCount), delta: "Available for clinic operations" },
+          { label: "Locations", value: String(locationCount), delta: "Configured hospital sites" },
+          { label: "Avg. Cutoff", value: `${averageCutoff}h`, delta: "Cancellation policy baseline" },
+        ]}
+      />
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {items.length > 0 ? (
+          items.map((tenant) => <TenantCard key={tenant.id} tenant={tenant} />)
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm xl:col-span-2">
+            <FileText className="mx-auto mb-3 text-slate-400" size={38} />
+            <p className="font-semibold">No tenants found</p>
+          </div>
+        )}
+      </section>
+
+      <Table
+        empty="No clinic locations"
+        headers={["Tenant", "Location", "Timezone", "Contact", "Status"]}
+        rows={items.flatMap((tenant) =>
+          tenant.locations.map((location) => [
+            <Primary key="tenant" label={tenant.name} sublabel={tenant.id} />,
+            location.name,
+            location.timezone,
+            <Primary key="contact" label={location.phone || "No phone"} sublabel={location.email} />,
+            <Status key="status" value={location.status} />,
+          ]),
+        )}
+      />
+    </>
+  );
+}
+
+function TenantCard({ tenant }: { tenant: Tenant }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold uppercase text-brand">{tenant.id}</p>
+          <h3 className="mt-1 text-xl font-bold text-slate-950">{tenant.name}</h3>
+          {tenant.legalName ? <p className="mt-1 text-sm text-slate-500">{tenant.legalName}</p> : null}
+        </div>
+        <Status value={tenant.status} />
+      </div>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+        <AuditFact label="Locations" value={String(tenant.locations.length)} />
+        <AuditFact label="Cancellation Cutoff" value={`${tenant.defaultCancellationCutoffHours ?? 0}h`} />
+        <AuditFact label="Created" value={formatDate(tenant.createdAt)} />
+      </dl>
+    </article>
+  );
+}
+
+function AuditLogCard({ item }: { item: AuditLogEntry }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold uppercase text-brand">{labelize(item.action)}</p>
+          <h3 className="mt-1 text-lg font-bold text-slate-950">{labelize(item.resourceType)}</h3>
+          <p className="mt-1 text-xs font-medium text-slate-500">{item.resourceId}</p>
+        </div>
+        <Status value={item.actorRole ?? "unknown"} />
+      </div>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+        <AuditFact label="Actor" value={item.actorUserId ?? "Unknown"} />
+        <AuditFact label="Created" value={`${formatDate(item.createdAt)} ${formatTime(item.createdAt)}`} />
+        <AuditFact className="sm:col-span-2" label="Reason" value={item.reason || "No reason recorded"} />
+      </dl>
+    </article>
+  );
+}
+
+function AuditFact({ className = "", label, value }: { className?: string; label: string; value: string }) {
+  return (
+    <div className={["rounded-lg bg-slate-50 p-3", className].filter(Boolean).join(" ")}>
+      <dt className="text-xs font-bold uppercase text-slate-500">{label}</dt>
+      <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</dd>
+    </div>
   );
 }
 
@@ -721,6 +868,14 @@ function formatDate(value: string) {
     return value;
   }
   return date.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function formatCurrency(cents: number) {

@@ -1,6 +1,7 @@
 "use client";
 
 import AlertCircle from "lucide-react/dist/esm/icons/circle-alert";
+import Building2 from "lucide-react/dist/esm/icons/building-2";
 import CalendarPlus from "lucide-react/dist/esm/icons/calendar-plus";
 import CheckCircle2 from "lucide-react/dist/esm/icons/circle-check-big";
 import FilePlus2 from "lucide-react/dist/esm/icons/file-plus-2";
@@ -16,18 +17,24 @@ import { useState } from "react";
 
 import {
   createAppointment,
+  createClinicalNote,
   createInvoice,
   createLabOrder,
   createPet,
   createPrescription,
   createStaff,
+  createTenant,
+  createTenantLocation,
   registerWalkIn,
+  type CreateClinicLocationRequest,
   type CreateAppointmentRequest,
+  type CreateClinicalNoteRequest,
   type CreateInvoiceRequest,
   type CreateLabOrderRequest,
   type CreatePetRequest,
   type CreatePrescriptionRequest,
   type CreateStaffRequest,
+  type CreateTenantRequest,
   type RegisterWalkInRequest,
 } from "@/lib/pawit-api";
 
@@ -50,6 +57,7 @@ type ActionFrameProps = {
 
 const locationDefault = "loc_001";
 const petDefault = "pet_001";
+const tenantDefault = "tenant_demo_clinic";
 
 export function WorkflowActions({ role, section }: WorkflowActionsProps) {
   switch (section) {
@@ -62,15 +70,97 @@ export function WorkflowActions({ role, section }: WorkflowActionsProps) {
       return <PetAction />;
     case "prescriptions":
       return role === "PetParent" ? null : <PrescriptionAction />;
+    case "clinical-notes":
+      return role === "PetParent" ? null : <ClinicalNoteAction />;
     case "lab-tests":
       return role === "LabTechnician" || role === "PetParent" ? null : <LabOrderAction />;
     case "billing":
       return role === "PetParent" ? null : <InvoiceAction />;
     case "staff":
       return <StaffAction />;
+    case "tenants":
+      return role === "SuperAdmin" ? <TenantActions /> : null;
     default:
       return null;
   }
+}
+
+function TenantActions() {
+  return (
+    <div className="grid gap-5 xl:grid-cols-2">
+      <CreateTenantAction />
+      <CreateTenantLocationAction />
+    </div>
+  );
+}
+
+function CreateTenantAction() {
+  const { handleSubmit, status } = useMutationForm(async (formData) => {
+    const request: CreateTenantRequest = {
+      name: textValue(formData, "name", "New PawIt Clinic"),
+      legalName: textValue(formData, "legalName", ""),
+      defaultCancellationCutoffHours: numberValue(formData, "defaultCancellationCutoffHours", 24),
+      firstLocation: {
+        name: textValue(formData, "locationName", "Main Clinic"),
+        timezone: textValue(formData, "timezone", "America/Chicago"),
+        phone: textValue(formData, "phone", ""),
+        email: textValue(formData, "locationEmail", ""),
+      },
+      firstAdmin: {
+        name: textValue(formData, "adminName", "Clinic Admin"),
+        email: textValue(formData, "adminEmail", "admin@example.com"),
+      },
+    };
+
+    await createTenant(request, idempotencyKey());
+    return "Tenant bootstrapped.";
+  });
+
+  return (
+    <ActionFrame icon={Building2} status={status} title="Bootstrap tenant">
+      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <Field label="Tenant name" name="name" required />
+        <Field label="Legal name" name="legalName" />
+        <Field defaultValue="24" label="Cancel cutoff hours" min="0" name="defaultCancellationCutoffHours" type="number" />
+        <Field defaultValue="Main Clinic" label="First location" name="locationName" required />
+        <Field defaultValue="America/Chicago" label="Timezone" name="timezone" required />
+        <Field label="Location phone" name="phone" />
+        <Field label="Location email" name="locationEmail" type="email" />
+        <Field label="Admin name" name="adminName" required />
+        <Field className="md:col-span-2" label="Admin email" name="adminEmail" required type="email" />
+        <SubmitButton label="Bootstrap" loading={status.kind === "submitting"} />
+      </form>
+    </ActionFrame>
+  );
+}
+
+function CreateTenantLocationAction() {
+  const { handleSubmit, status } = useMutationForm(async (formData) => {
+    const request: CreateClinicLocationRequest = {
+      name: textValue(formData, "name", "New Location"),
+      timezone: textValue(formData, "timezone", "America/Chicago"),
+      phone: textValue(formData, "phone", ""),
+      email: textValue(formData, "email", ""),
+      cancellationCutoffHours: numberValue(formData, "cancellationCutoffHours", 24),
+    };
+
+    await createTenantLocation(textValue(formData, "tenantId", tenantDefault), request, idempotencyKey());
+    return "Location added.";
+  });
+
+  return (
+    <ActionFrame icon={Building2} status={status} title="Add tenant location">
+      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <Field defaultValue={tenantDefault} label="Tenant ID" name="tenantId" required />
+        <Field label="Location name" name="name" required />
+        <Field defaultValue="America/Chicago" label="Timezone" name="timezone" required />
+        <Field defaultValue="24" label="Cancel cutoff hours" min="0" name="cancellationCutoffHours" type="number" />
+        <Field label="Phone" name="phone" />
+        <Field label="Email" name="email" type="email" />
+        <SubmitButton label="Add location" loading={status.kind === "submitting"} />
+      </form>
+    </ActionFrame>
+  );
 }
 
 function AppointmentAction({ requestedByPetParent = false }: { requestedByPetParent?: boolean }) {
@@ -225,6 +315,39 @@ function PrescriptionAction() {
         <Field defaultValue="Once daily" label="Frequency" name="frequency" />
         <Field defaultValue="7 days" label="Duration" name="duration" />
         <Field defaultValue="Administer as directed." label="Instructions" name="instructions" />
+        <SubmitButton label="Draft" loading={status.kind === "submitting"} />
+      </form>
+    </ActionFrame>
+  );
+}
+
+function ClinicalNoteAction() {
+  const { handleSubmit, status } = useMutationForm(async (formData) => {
+    const request: CreateClinicalNoteRequest = {
+      locationId: textValue(formData, "locationId", locationDefault),
+      petId: textValue(formData, "petId", petDefault),
+      reasonForVisit: textValue(formData, "reasonForVisit", "Follow-up consultation"),
+      subjective: textValue(formData, "subjective", ""),
+      objective: textValue(formData, "objective", ""),
+      assessment: textValue(formData, "assessment", "Clinically stable"),
+      plan: textValue(formData, "plan", "Continue monitoring and recheck as needed."),
+      sharedWithPetParent: false,
+    };
+
+    await createClinicalNote(request, idempotencyKey());
+    return "Clinical note draft created.";
+  });
+
+  return (
+    <ActionFrame icon={FilePlus2} status={status} title="Draft clinical note">
+      <form className="grid gap-4 md:grid-cols-4" onSubmit={handleSubmit}>
+        <Field defaultValue={locationDefault} label="Location ID" name="locationId" required />
+        <Field defaultValue={petDefault} label="Pet ID" name="petId" required />
+        <Field className="md:col-span-2" defaultValue="Follow-up consultation" label="Reason" name="reasonForVisit" required />
+        <Field className="md:col-span-2" label="Subjective" name="subjective" />
+        <Field className="md:col-span-2" label="Objective" name="objective" />
+        <Field defaultValue="Clinically stable" label="Assessment" name="assessment" />
+        <Field defaultValue="Continue monitoring and recheck as needed." label="Plan" name="plan" />
         <SubmitButton label="Draft" loading={status.kind === "submitting"} />
       </form>
     </ActionFrame>

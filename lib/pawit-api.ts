@@ -30,6 +30,45 @@ export type FeedbackResponse = components["schemas"]["FeedbackResponse"];
 export type Feedback = components["schemas"]["Feedback"];
 export type Person = components["schemas"]["Person"];
 export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
+export type ClinicLocation = components["schemas"]["ClinicLocation"];
+export type Tenant = {
+  id: string;
+  name: string;
+  legalName?: string;
+  status: string;
+  stripeCustomerId?: string;
+  defaultCancellationCutoffHours?: number;
+  locations: ClinicLocation[];
+  createdAt: string;
+  updatedAt?: string;
+};
+export type CreateClinicLocationRequest = {
+  name: string;
+  timezone: string;
+  phone?: string;
+  email?: string;
+  cancellationCutoffHours?: number;
+};
+export type CreateTenantRequest = {
+  name: string;
+  legalName?: string;
+  defaultCancellationCutoffHours?: number;
+  firstLocation: CreateClinicLocationRequest;
+  firstAdmin: {
+    name: string;
+    email: string;
+    phone?: string;
+    temporaryPassword?: string;
+  };
+};
+export type TenantMutationResult = {
+  tenant: Tenant;
+  idempotent?: boolean;
+};
+export type ClinicLocationMutationResult = {
+  location: ClinicLocation;
+  idempotent?: boolean;
+};
 export type CreateAppointmentRequest = JsonRequest<"/api/v1/appointments", "post">;
 export type AppointmentMutationResult = JsonResponse<"/api/v1/appointments", "post", 201>;
 export type CancelAppointmentRequest = JsonRequest<"/api/v1/appointments/{id}/cancel", "post">;
@@ -51,6 +90,10 @@ export type CreatePrescriptionRequest = JsonRequest<"/api/v1/prescriptions", "po
 export type PrescriptionMutationResult = JsonResponse<"/api/v1/prescriptions", "post", 201>;
 export type FinalizePrescriptionRequest = JsonRequest<"/api/v1/prescriptions/{id}/finalize", "post">;
 export type FinalizePrescriptionResult = JsonResponse<"/api/v1/prescriptions/{id}/finalize", "post", 200>;
+export type CreateClinicalNoteRequest = JsonRequest<"/api/v1/clinical-notes", "post">;
+export type ClinicalNoteMutationResult = JsonResponse<"/api/v1/clinical-notes", "post", 201>;
+export type FinalizeClinicalNoteRequest = JsonRequest<"/api/v1/clinical-notes/{id}/finalize", "post">;
+export type FinalizeClinicalNoteResult = JsonResponse<"/api/v1/clinical-notes/{id}/finalize", "post", 200>;
 export type CreateLabOrderRequest = JsonRequest<"/api/v1/lab-tests", "post">;
 export type LabOrderMutationResult = JsonResponse<"/api/v1/lab-tests", "post", 201>;
 export type UpdateLabOrderStatusRequest = JsonRequest<"/api/v1/lab-tests/{id}/status", "post">;
@@ -189,6 +232,29 @@ export async function getAuditLogs() {
   return response.data;
 }
 
+export async function getTenants() {
+  const response = await api.get<{ items: Tenant[] }>("/api/v1/tenants");
+  return response.data;
+}
+
+export async function createTenant(body: CreateTenantRequest, idempotencyKey: string): Promise<TenantMutationResult> {
+  const response = await api.post<TenantMutationResult>("/api/v1/tenants", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createTenantLocation(
+  tenantID: string,
+  body: CreateClinicLocationRequest,
+  idempotencyKey: string,
+): Promise<ClinicLocationMutationResult> {
+  const response = await api.post<ClinicLocationMutationResult>(`/api/v1/tenants/${tenantID}/locations`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
 export async function createAppointment(
   body: CreateAppointmentRequest,
   idempotencyKey: string,
@@ -314,6 +380,27 @@ export async function finalizePrescription(
   idempotencyKey: string,
 ): Promise<FinalizePrescriptionResult> {
   const response = await api.post<FinalizePrescriptionResult>(`/api/v1/prescriptions/${prescriptionID}/finalize`, body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function createClinicalNote(
+  body: CreateClinicalNoteRequest,
+  idempotencyKey: string,
+): Promise<ClinicalNoteMutationResult> {
+  const response = await api.post<ClinicalNoteMutationResult>("/api/v1/clinical-notes", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function finalizeClinicalNote(
+  clinicalNoteID: string,
+  body: FinalizeClinicalNoteRequest,
+  idempotencyKey: string,
+): Promise<FinalizeClinicalNoteResult> {
+  const response = await api.post<FinalizeClinicalNoteResult>(`/api/v1/clinical-notes/${clinicalNoteID}/finalize`, body, {
     headers: { "Idempotency-Key": idempotencyKey },
   });
   return response.data;
